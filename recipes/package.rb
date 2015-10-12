@@ -44,9 +44,27 @@ package node['nginx']['package_name'] do
   not_if 'which nginx'
 end
 
-service 'nginx' do
-  supports :status => true, :restart => true, :reload => true
-  action   :enable
+case node['nginx']['init_style']
+when 'runit'
+  node.set['nginx']['src_binary'] = node['nginx']['binary']                                                                                                                                                                                 
+
+  include_recipe "runit"                                                                                                                                                                                                                    
+
+  if node.platform == 'ubuntu'
+    bash "stop nginx"
+  end
+
+  runit_service "nginx"                                                                                                                                                                                                                     
+
+  service 'nginx' do                                                                                                                                                                                                                        
+    supports :status => true, :restart => true, :reload => true                                                                                                                                                                             
+    reload_command "#{node['runit']['sv_bin']} hup #{node['runit']['service_dir']}/nginx"                                                                                                                                                   
+  end                                  
+else
+  service 'nginx' do
+    supports :status => true, :restart => true, :reload => true
+    action   :enable
+  end
 end
 
 include_recipe 'nginx::commons'
